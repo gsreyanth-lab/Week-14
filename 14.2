@@ -1,0 +1,29 @@
+===== CHARACTER STUFFING =====
+Original : A B C DLE D E 
+Frame    : DLE STX A B C DLE DLE D E DLE ETX 
+Recovered: A B C DLE D E 
+Match    : YES
+
+Original : X DLE DLE Y 
+Frame    : DLE STX X DLE DLE DLE DLE Y DLE ETX 
+Recovered: X DLE DLE Y 
+Match    : YES
+
+===== BIT STUFFING =====
+Original : 01111110
+Stuffed  : 011111010
+Framed   : 01111110 011111010 01111110
+Unstuffed: 01111110
+Match    : YES
+
+Original : 1111111111
+Stuffed  : 111110111110
+Framed   : 01111110 111110111110 01111110
+Unstuffed: 1111111111
+Match    : YES
+
+Original : 0110111110
+Stuffed  : 01101111100
+Framed   : 01111110 01101111100 01111110
+Unstuffed: 0110111110
+Match    : YES
