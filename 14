@@ -1,0 +1,95 @@
+#include <stdio.h>
+#include <string.h>
+
+#define DLE 0x10
+#define STX 0x02
+#define ETX 0x03
+
+/* ---------- Character (byte) stuffing ---------- */
+void show(const unsigned char *b, int n) {
+    for (int i = 0; i < n; i++) {
+        if (b[i] == DLE)      printf("DLE ");
+        else if (b[i] == STX) printf("STX ");
+        else if (b[i] == ETX) printf("ETX ");
+        else                  printf("%c ", b[i]);
+    }
+    printf("\n");
+}
+
+int charStuff(const unsigned char *d, int n, unsigned char *out) {
+    int k = 0;
+    out[k++] = DLE; out[k++] = STX;              /* start flag DLESTX */
+    for (int i = 0; i < n; i++) {
+        if (d[i] == DLE) out[k++] = DLE;         /* stuff an extra DLE */
+        out[k++] = d[i];
+    }
+    out[k++] = DLE; out[k++] = ETX;              /* end flag DLEETX */
+    return k;
+}
+
+int charUnstuff(const unsigned char *f, int n, unsigned char *out) {
+    int k = 0;
+    for (int i = 2; i < n - 2; i++) {            /* skip start/end flags */
+        if (f[i] == DLE) i++;                    /* DLE DLE -> keep one DLE */
+        out[k++] = f[i];
+    }
+    return k;
+}
+
+void charTest(const unsigned char *data, int n) {
+    unsigned char frame[100], back[100];
+    int fl = charStuff(data, n, frame);
+    int bl = charUnstuff(frame, fl, back);
+    printf("Original : "); show(data, n);
+    printf("Frame    : "); show(frame, fl);
+    printf("Recovered: "); show(back, bl);
+    printf("Match    : %s\n\n", (bl == n && memcmp(data, back, n) == 0) ? "YES" : "NO");
+}
+
+/* ---------- Bit stuffing ---------- */
+void bitStuff(const char *in, char *out) {
+    int c = 0, k = 0, n = strlen(in);
+    for (int i = 0; i < n; i++) {
+        out[k++] = in[i];
+        if (in[i] == '1') {
+            if (++c == 5) { out[k++] = '0'; c = 0; }   /* stuff a 0 after five 1s */
+        } else c = 0;
+    }
+    out[k] = '\0';
+}
+
+void bitUnstuff(const char *in, char *out) {
+    int c = 0, k = 0, n = strlen(in);
+    for (int i = 0; i < n; i++) {
+        out[k++] = in[i];
+        if (in[i] == '1') {
+            if (++c == 5) { i++; c = 0; }              /* drop the stuffed 0 */
+        } else c = 0;
+    }
+    out[k] = '\0';
+}
+
+void bitTest(const char *data) {
+    char st[100], back[100];
+    bitStuff(data, st);
+    bitUnstuff(st, back);
+    printf("Original : %s\n", data);
+    printf("Stuffed  : %s\n", st);
+    printf("Framed   : 01111110 %s 01111110\n", st);
+    printf("Unstuffed: %s\n", back);
+    printf("Match    : %s\n\n", strcmp(data, back) == 0 ? "YES" : "NO");
+}
+
+int main(void) {
+    printf("===== CHARACTER STUFFING =====\n");
+    unsigned char d1[] = {'A', 'B', 'C', DLE, 'D', 'E'};
+    unsigned char d2[] = {'X', DLE, DLE, 'Y'};
+    charTest(d1, 6);
+    charTest(d2, 4);
+
+    printf("===== BIT STUFFING =====\n");
+    bitTest("01111110");
+    bitTest("1111111111");
+    bitTest("0110111110");
+    return 0;
+}
